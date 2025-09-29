@@ -1,17 +1,24 @@
+
+// Motor Driver Pins
 #define AIN1 11
-#define BIN1 10
+#define BIN1 10 
 #define AIN2 9
 #define BIN2 6
-#define PWMA 3
-#define PWMB 5
+#define PWMA 3 // PMW motor A
+#define PWMB 5 // PMW motor B
 #define STBY 2
 
+// Pin for emitter
 #define emitter 12
+
+// Zumo reflection array libary
 #include <QTRSensors.h>
 
 QTRSensors qtr;
 
+//Amount of senors
 const uint8_t SensorCount = 6;
+//Sensor pins is anlog pins A0-A5 turned to digital pins
 uint8_t qtrPins[SensorCount] = {14, 15, 16, 17, 18, 19};
 
 unsigned int sensorValues[SensorCount];
@@ -74,7 +81,7 @@ void loop() {
   }
   Serial.println();
 
-
+  //Turning Sensor values between 0-2500 into binary values 1 if over 1750 and 0 if lower
   int binValues[SensorCount];
   for (uint8_t i = 0; i < SensorCount; i++) {
     if (sensorValues[i] > 1750) {
@@ -93,13 +100,14 @@ void loop() {
 
   unsigned long lastSearchTime = 0;
   const int searchInterval = 50;
-    
+  
+  //if sum is 0, sensor is out of route, Using last error to continue last correction 
   if (sum == 0) {
       if (millis() - lastSearchTime > searchInterval) {
           lastSide = (last_error < 0) ? -1 : 1;
           int searchSpeed = map(abs(last_error), 0, 3.5, 90, 50);
-          moveMotor(AIN1, AIN2, PWMA, searchSpeed * lastSide);
-          moveMotor(BIN1, BIN2, PWMB, -searchSpeed * lastSide);
+          moveLeftMotor( searchSpeed * lastSide);
+          moveRightMotor( -searchSpeed * lastSide);
           lastSearchTime = millis();
       }
       return;
@@ -109,12 +117,13 @@ void loop() {
   error = pos - 3.5;
 
   lastSide = (error < 0) ? -1 : 1;
-  float delta_error = error - last_error; // derivative term
+  float delta_error = error - last_error;
   last_error = error;
 
   float Kp = 30.0;
   float Kd = 10.0;      
   float k  = 10.0;
+
   float correction = Kp * error + Kd * delta_error;
   correction = constrain(correction, -120, 120);
 
@@ -123,10 +132,11 @@ void loop() {
   int base_speed = map(dynamic_factor, 0, k, max_speed, 60); 
   base_speed = constrain(base_speed, min_speed, max_speed);
 
+
   int leftSpeed  = base_speed - correction;
   int rightSpeed = base_speed + correction;
 
-  // Limit PWM range
+  // Limit speed range
   leftSpeed  = constrain(leftSpeed, 50, 200);
   rightSpeed = constrain(rightSpeed, 50, 200);
 
@@ -134,8 +144,10 @@ void loop() {
   Serial.println(leftSpeed);
   Serial.println(rightSpeed);
 
-  moveMotor(AIN1, AIN2, PWMA, -leftSpeed);
-  moveMotor(BIN1, BIN2, PWMB, -rightSpeed);
+  //moving both motors based on speed calculated
+  moveLeftMotor(leftSpeed);
+  moveRightMotor(rightSpeed);
+  
 
 }
 
@@ -145,12 +157,13 @@ void stop(int stopTime) {
   delay(stopTime);
 }
 
+
 void moveMotor(int in1, int in2, int pwm, int speed) {
-  if (speed > 0) {
+  if (speed < 0) {
     digitalWrite(in1, HIGH);
     digitalWrite(in2, LOW);
     analogWrite(pwm, speed);
-  } else if (speed < 0) {
+  } else if (speed > 0) {
     digitalWrite(in1, LOW);
     digitalWrite(in2, HIGH);
     analogWrite(pwm, -speed);
@@ -160,4 +173,12 @@ void moveMotor(int in1, int in2, int pwm, int speed) {
     digitalWrite(in2, LOW);
     analogWrite(pwm, 0);
   }
+}
+
+void moveRightMotor(int speed) {
+  moveMotor(BIN1, BIN2, PWMB, speed);
+}
+
+void moveLeftMotor(int speed) {
+  moveMotor(AIN1, AIN2, PWMA, speed);
 }
