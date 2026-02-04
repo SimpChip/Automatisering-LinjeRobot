@@ -16,7 +16,7 @@
 QTRSensors qtr;
 
 const uint8_t SensorCount = 11;
-uint8_t qtrPins[SensorCount] = {2,3,4,5,6,18,19,8,9,12,13};
+uint8_t qtrPins[SensorCount] = {13,12,9,8,18,19,6,5,4,3,2};
 
 uint16_t sensorValues[SensorCount];
 uint16_t whiteRefValues[SensorCount];
@@ -121,7 +121,8 @@ void loop() {
   }
 
   // posisjon mellom 0 .. 12
-  float pos = (float)weightedSum / sum;  
+  float pos = (float)weightedSum / sum;
+  float error = pos-6;
   
   int rightSpeed = 0;
   int leftSpeed = 0;
@@ -148,4 +149,5 @@ void moveMotor(int in1, int in2, int pwm, int speed) {
     analogWrite(pwm, 0);
   }
 }
+
 
